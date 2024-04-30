@@ -12,12 +12,19 @@ func main() {
 	// The file server uses the '.' (dot) to indicate the current directory
 	fileServer := http.FileServer(http.Dir("."))
 	// Use the Handle method to register the file server as the handler for the root path
-	mux.Handle("/", fileServer)
+	mux.Handle("/app/", http.StripPrefix("/app/", fileServer))
 
 	// Setup file server for static assets
 	// StripPrefix removes the "/assets" prefix before looking in the assets directory
 	assetsFileServer := http.FileServer(http.Dir("./assets"))
 	mux.Handle("/assets/", http.StripPrefix("/assets/", assetsFileServer))
+
+	// Add a readiness endpoint
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
 
 	// Step 2: Wrap that mux in a custom middleware function that adds CORS headers to the response
 	corsMux := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
