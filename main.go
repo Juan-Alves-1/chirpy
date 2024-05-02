@@ -1,18 +1,47 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 )
+
+type apiConfig struct {
+	fileserverHits int
+}
+
+func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cfg.fileserverHits++
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (cfg *apiConfig) serveMetrics(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(fmt.Sprintf("Hits: %d", cfg.fileserverHits)))
+}
+
+func (cfg *apiConfig) resetHits(w http.ResponseWriter, r *http.Request) {
+	cfg.fileserverHits = 0
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Hits reset"))
+}
 
 func main() {
 	// Step 1: Create a new http.ServeMux
 	mux := http.NewServeMux()
 
+	// Initialize your config struct
+	apiCfg := &apiConfig{}
+
 	// Create a file server which serves files out of the current directory
 	// The file server uses the '.' (dot) to indicate the current directory
 	fileServer := http.FileServer(http.Dir("."))
 	// Use the Handle method to register the file server as the handler for the root path
-	mux.Handle("/app/", http.StripPrefix("/app/", fileServer))
+	// Wrap the file server handler with your new middleware
+	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app/", fileServer)))
 
 	// Setup file server for static assets
 	// StripPrefix removes the "/assets" prefix before looking in the assets directory
@@ -25,6 +54,9 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
+
+	mux.HandleFunc("/metrics", apiCfg.serveMetrics)
+	mux.HandleFunc("/reset", apiCfg.resetHits)
 
 	// Step 2: Wrap that mux in a custom middleware function that adds CORS headers to the response
 	corsMux := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
