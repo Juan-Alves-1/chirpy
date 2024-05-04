@@ -48,13 +48,6 @@ func main() {
 	assetsFileServer := http.FileServer(http.Dir("./assets"))
 	mux.Handle("/assets/", http.StripPrefix("/assets/", assetsFileServer))
 
-	// Add a readiness endpoint
-	//mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-	//	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	//	w.WriteHeader(http.StatusOK)
-	//	w.Write([]byte("OK"))
-	//})
-
 	mux.HandleFunc("GET /healthz", handlerReadiness)
 	mux.HandleFunc("GET /metrics", apiCfg.serveMetrics)
 	mux.HandleFunc("GET /reset", apiCfg.resetHits)
