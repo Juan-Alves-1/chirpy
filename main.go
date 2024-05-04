@@ -49,14 +49,15 @@ func main() {
 	mux.Handle("/assets/", http.StripPrefix("/assets/", assetsFileServer))
 
 	// Add a readiness endpoint
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
-	})
+	//mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+	//	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	//	w.WriteHeader(http.StatusOK)
+	//	w.Write([]byte("OK"))
+	//})
 
-	mux.HandleFunc("/metrics", apiCfg.serveMetrics)
-	mux.HandleFunc("/reset", apiCfg.resetHits)
+	mux.HandleFunc("GET /healthz", handlerReadiness)
+	mux.HandleFunc("GET /metrics", apiCfg.serveMetrics)
+	mux.HandleFunc("GET /reset", apiCfg.resetHits)
 
 	// Step 2: Wrap that mux in a custom middleware function that adds CORS headers to the response
 	corsMux := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
