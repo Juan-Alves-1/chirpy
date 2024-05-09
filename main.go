@@ -17,9 +17,16 @@ func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 }
 
 func (cfg *apiConfig) serveMetrics(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("Hits: %d", cfg.fileserverHits)))
+	w.Write([]byte(fmt.Sprintf(`
+	<html>
+	<body>
+		<h1>Welcome, Chirpy Admin</h1>
+		<p>Chirpy has been visited %d times!</p>
+	</body>
+	</html>
+		`, cfg.fileserverHits)))
 }
 
 func (cfg *apiConfig) resetHits(w http.ResponseWriter, r *http.Request) {
@@ -48,9 +55,10 @@ func main() {
 	assetsFileServer := http.FileServer(http.Dir("./assets"))
 	mux.Handle("/assets/", http.StripPrefix("/assets/", assetsFileServer))
 
-	mux.HandleFunc("GET /healthz", handlerReadiness)
-	mux.HandleFunc("GET /metrics", apiCfg.serveMetrics)
-	mux.HandleFunc("GET /reset", apiCfg.resetHits)
+	mux.HandleFunc("GET /api/healthz", handlerReadiness)
+	mux.HandleFunc("GET /admin/metrics", apiCfg.serveMetrics)
+	mux.HandleFunc("GET /api/reset", apiCfg.resetHits)
+	mux.HandleFunc("POST /api/validate_chirp", handlerChirpsValidate)
 
 	// Step 2: Wrap that mux in a custom middleware function that adds CORS headers to the response
 	corsMux := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
